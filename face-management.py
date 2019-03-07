@@ -50,4 +50,4 @@ def add(video):
 
 if sys.argv[1] == "--simple-add":
     video = sys.argv[2]
-    add_new(video)
+    add(video)
