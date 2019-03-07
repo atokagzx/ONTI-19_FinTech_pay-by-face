@@ -18,6 +18,7 @@ cf.Key.set(key)
 id_x = 0
 
 def add(video):
+    global id_x
     video = cv.VideoCapture(video)
     if video.get(cv.CAP_PROP_FRAME_COUNT) < 5:
         print("Video does not contain any face")
