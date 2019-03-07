@@ -14,7 +14,7 @@ def GetParams():
     return az.FaceAPIsession(key, baseURL, group)
 
 
-def US004(session, video):
+def SimpleAdd(session, video):
     try:
         personID, facesID, count = az.CreateAnonPerson(session, video)
         az.UpdateGroupData(session, "Updated")
@@ -25,18 +25,23 @@ def US004(session, video):
         print(exc.message)
 
 
-def US006(session):
+def GetPersonList(session):
     print('\n'.join(az.GetPersonList(session)))
 
 
-def US007(session, personID):
+def DeletePerson(session, personID):
     try:
         az.DeletePerson(session, personID=personID)
         az.UpdateGroupData(session, "Updated")
     except az.PersonExistError:
         print('Person with id {0} does not exist'.format(personID))
 
-#def US008(session, )
+def Train(session):
+    if az.CheckGroupUpdation(session):
+        print('Training task for {0} persons started'.format(az.StartTrain(session)))
+        az.UpdateGroupData(session, 'Don\'t updated')
+    else:
+        print('System does not updated')
 
 
 def Main():
@@ -44,7 +49,7 @@ def Main():
     az.CreateGroup(session)
     temp = sys.argv
     if temp[1] == '--simple-add':
-        US004(session, temp[2])
+        SimpleAdd(session, temp[2])
 
 
 Main()

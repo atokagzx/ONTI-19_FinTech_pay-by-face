@@ -156,6 +156,7 @@ def CountFaces(session, frames):
 
 
 def CheckFaces(session, frames):
+    frames = [x for x in frames if CheckFace(session, x)]
     if len(frames) == 0:
         raise FacesCountError()
 
@@ -164,6 +165,12 @@ def CheckFace(session, frame):
         return False
     else:
         return True
+
+def CheckGroupUpdation(session):
+    if GetGroupData(session) == 'Updated':
+        return True
+    else:
+        return False
 ### </Auxiliary functions> ###
 
 ### <Main functions> ###
@@ -175,7 +182,8 @@ def CreateGroup(session):
 
 
 def CreatePerson(session, name, video):
-    CheckFaces(session, GetFrames(video))
+    frames = GetFrames(video)
+    CheckFaces(session, frames)
     try:
         GetPersonID(session, name)
         raise PersonExistError('Person {0} already exist'.format(name))
@@ -183,26 +191,26 @@ def CreatePerson(session, name, video):
         pass
     cf.person.create(session.group, name, False)
     personID = GetPersonID(session, name)
-    facesID, count = UploadFaces(session, personID, video)
+    facesID, count = UploadFaces(session, personID, frames)
 
     return personID, facesID, count
 
 
 def CreateAnonPerson(session, video):
-    CheckFaces(session, GetFrames(video))
+    frames = GetFrames(video)
+    CheckFaces(session, frames)
     try:
         number = str(max([int(x['personId']) for x in cf.person.lists(session.group) if x['personId'].isdigit()]) + 1)
     except:
         number = '0'
-    cf.person.create(session.group, number, False)
+    cf.person.create(session.group, number)
     personID = GetPersonID(session, number)
-    facesID, count = UploadFaces(session, personID, video)
+    facesID, count = UploadFaces(session, personID, frames)
 
     return personID, facesID, count
 
 
-def UploadFaces(session, personID, video, check=True):
-    frames = [x for x in GetFrames(video) if CheckFace(session, x)]
+def UploadFaces(session, personID, frames, check=True):
     if check:
         CheckFaces(session, frames)
     facesID = []
@@ -272,6 +280,6 @@ def UpdateGroupData(session, data):
     cf.person_group.update(session.group, session.group, data)
 
 
-#def CheckGroupStatus(sesssion):
-
+def GetGroupData(session):
+    return cf.person_group.get(session.group)['userData'] 
 ### </Main functions> ###
