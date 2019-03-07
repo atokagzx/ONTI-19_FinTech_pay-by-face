@@ -20,10 +20,15 @@ account = web3.eth.account.privateKeyToAccount(private_key)
 def deploy(private_key):
 	balance = web3.eth.getBalance(account.address)
 	with open("registrar.abi") as abi_file:
-		abi = loads(abi_file.read())
+		reg_abi = loads(abi_file.read())
 	with open("registrar.bin") as bin_file:
-		bytecode = bin_file.read()
-	contract = web3.eth.contract(abi = abi, bytecode = bytecode)
+		reg_bytecode = bin_file.read()
+	with open("payment.abi") as abi_file:
+		pay_abi = loads(abi_file.read())
+	with open("payment.bin") as bin_file:
+		pay_bytecode = bin_file.read()
+	contract_reg = web3.eth.contract(abi = reg_abi, bytecode = reg_bytecode)
+	contract_pay = web3.eth.contract(abi = pay_abi, bytecode = pay_bytecode)
 	headers = {"accept": "application/json"}
 	try:
 		data = requests.get(gas_url, headers)
@@ -34,22 +39,37 @@ def deploy(private_key):
 	if balance < gas_price * 70000:
 		print("No enough funds to send transaction")
 		return
-	tx_con = contract.constructor().buildTransaction({
+	tx_reg = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
 			 "gas": 300000,
 			 "gasPrice": gas_price 
 			 })
-	signed = account.signTransaction(tx_con)
-	tx_hash = web3.eth.sendRawTransaction(signed.rawTransaction)
-	tx = web3.eth.waitForTransactionReceipt(tx_hash)
-	if tx["blockNumber"] is None:
+	signed = account.signTransaction(tx_reg)
+	tx_hash_reg = web3.eth.sendRawTransaction(signed.rawTransaction)
+	tx_r = web3.eth.waitForTransactionReceipt(tx_hash_reg)
+	if tx_r["blockNumber"] is None:
+		print("Transaction is not validated too long")
+		return
+	if balance < gas_price * 70000:
+		print("No enough funds to send transaction")
+		return
+	tx_pay = contract_reg.constructor().buildTransaction({
+			"from": account.address,
+			 "nonce": web3.eth.getTransactionCount(account.address),
+			 "gas": 300000,
+			 "gasPrice": gas_price 
+			 })
+	signed = account.signTransaction(tx_pay)
+	tx_hash_pay = web3.eth.sendRawTransaction(signed.rawTransaction)
+	tx_p = web3.eth.waitForTransactionReceipt(tx_hash_pay)
+	if tx_p["blockNumber"] is None:
 		print("Transaction is not validated too long")
 		return
 	with open("registrar.json", "w") as registrar:
-		dump({"registrar": {"address": tx["contractAddress"], "startBlock": tx["blockNumber"]}}, registrar)
-	print("KYC Resistrar:", account.address)
-	print("Payment Handler:", tx["contractAddress"])
+		dump({"registrar": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}, "payments": {"address": tx_p["contractAddress"], "startBlock": tx_p["blockNumber"]}}, registrar)
+	print("KYC Resistrar:", tx_r["contractAddress"])
+	print("Payment Handler:", tx_p["contractAddress"])
 
 
 if sys.argv[1] == "--deploy":
