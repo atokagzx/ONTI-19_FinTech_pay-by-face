@@ -1,0 +1,1 @@
+[{"constant":false,"inputs":[{"name":"number","type":"uint256"}],"name":"add_user","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[],"payable":false,"stateMutability":"nonpayable","type":"constructor"}]
