@@ -35,6 +35,7 @@ def add(video):
     try:
         cf.person_group.create(groupID)
     except:
+        pass
     creation = cf.person.create(groupID, id_x)
     id_x += 1
     person_id = creation["personId"]
