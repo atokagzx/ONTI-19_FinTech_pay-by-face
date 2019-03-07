@@ -10,15 +10,10 @@ with open("faceapi.json") as api:
     data = load(api)
     key = data["key"]
     base_url = data["serviceUrl"]
-    groupID = data["grourId"]
+    groupID = data["groupId"]
 
 cf.BaseUrl.set(base_url)
 cf.Key.set(key)
-
-try:
-    cf.person_group.create(groupID)
-except:
-    pass
 
 id_x = 0
 
@@ -39,6 +34,10 @@ def add(video):
         if len(face_det) == 0:
             print("Video does not contain any face")
             return
+    try:
+        cf.person_group.create(groupID)
+    except:
+        pass
     print("5 frames extracted")
     print("PersonId:", person_id)
     print("FaceIds")
