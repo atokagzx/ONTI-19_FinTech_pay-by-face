@@ -28,7 +28,6 @@ def make_privet_key(ID, pin_code):
 	privet_key = keccak_256(privet_key + m + num_pin(pin_code, 2)).digest()
 	privet_key = keccak_256(privet_key + m + num_pin(pin_code, 3)).digest()
 	privet_key = hex(int.from_bytes(privet_key, "big"))[2:]
-	print(privet_key)
 	return privet_key
 
 def convert(balance):
@@ -37,32 +36,32 @@ def convert(balance):
     elif balance < 10**6:
         balance = balance / 10**3
         if len(str(balance)) > 8:
-        	return "{0:.6f}".format(balance).rstrip('0') + " kwei"
+        	return "{0:.6f}".format(balance).rstrip('0').rstrip(".") + " kwei"
        	return str(balance) + " kwei"
     elif balance < 10**9:
     	balance = balance / 10**6
     	if len(str(balance)) > 8:
-    		return "{0:.6f}".format(balance).rstrip('0') + " mwei"
+    		return "{0:.6f}".format(balance).rstrip('0').rstrip(".") + " mwei"
     	return str(balance) + " mwei"
     elif balance < 10**12:
     	balance = balance / 10**9
     	if len(str(balance)) > 8:
-    		return "{0:.6f}".format(balance).rstrip('0') + " gwei"
+    		return "{0:.6f}".format(balance).rstrip('0').rstrip(".") + " gwei"
     	return str(balance) + " gwei"
     elif balance < 10**15:
     	balance = balance / 10**12
     	if len(str(balance)) > 8:
-    		return "{0:.6f}".format(balance).rstrip('0') + " szabo"
+    		return "{0:.6f}".format(balance).rstrip('0').rstrip(".") + " szabo"
     	return str(balance) + " szabo"
     elif balance < 10**18:
     	balance = balance / 10**15
     	if len(str(balance)) > 8:
-    		return "{0:.6f}".format(balance).rstrip('0') + " finney"
+    		return "{0:.6f}".format(balance).rstrip('0').rstrip(".") + " finney"
     	return str(balance) + " finney"
     else:
     	balance = balance / 10**18
     	if len(str(balance)) > 8:
-    		return "{0:.6f}".format(balance).rstrip('0') + " poa"
+    		return "{0:.6f}".format(balance).rstrip('0').rstrip(".") + " poa"
     	return str(balance) + " poa"
 
 def get_user_balance(private_key):
