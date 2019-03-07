@@ -1,55 +1,53 @@
 #!/usr/bin/env python
 
-### Put your code below this comment ###
-import AzureCSLib as az
+import cognitive_face as cf
+import cv2 as cv 
+from json import load
 import sys
-def GetParams():
-    import json
-    with open('faceapi.json') as jsonFile:
-        key = json.load(jsonFile)['key']
-    with open('faceapi.json') as jsonFile:
-        group = json.load(jsonFile)['groupId']
-    with open('faceapi.json') as jsonFile:
-        baseURL = json.load(jsonFile)['serviceUrl']
-    return az.FaceAPIsession(key, baseURL, group)
 
 
-def SimpleAdd(session, video):
-    try:
-        personID, facesID, count = az.CreateAnonPerson(session, video)
-        az.UpdateGroupData(session, "Updated")
-        print('{1} frames extracted{0}PersonId: {2}{0}FaceIds{0}======={0}{3}'.format('\n', count, personID, '\n'.join([x['persistedFaceId'] for x in facesID])))
-    except (az.FacesCountError, az.FramesCountError):
-        print('Video does not contain any face')
-    except az.PersonExistError as exc:
-        print(exc.message)
+with open("faceapi.json") as api:
+    data = load(api)
+    key = data["key"]
+    base_url = data["serviceUrl"]
+    groupID = data["grourId"]
 
+cf.BaseUrl.set(base_url)
+cf.Key.set(key)
 
-def GetPersonList(session):
-    print('\n'.join(az.GetPersonList(session)))
+try:
+    cf.person_group.create(groupID)
+except:
+    pass
 
+id_x = 0
 
-def DeletePerson(session, personID):
-    try:
-        az.DeletePerson(session, personID=personID)
-        az.UpdateGroupData(session, "Updated")
-    except az.PersonExistError:
-        print('Person with id {0} does not exist'.format(personID))
+def add(video):
+    video = cv.VideoCapture(video)
+    if video.get(cv.CAP_PROP_FRAME_COUNT) < 5:
+        print("Video does not contain any face")
+        return
+    creation = cf.person.create(groupID, id_x)
+    id_x += 1
+    person_id = creation["personId"]
+    shift = video.get(cv.CAP_PROP_FRAME_COUNT) // video.get(cv.CAP_PROP_FPS) // 5
+    for i in range(5): 
+        video.set(cv.CAP_PROP_POS_FRAMES, shift * i)
+        res, frame = video.read()
+        cv.imwrite("frame{}.jpg".format(i), frame)
+        face_det = cf.face.detect("frame{}.jpg".format(i))
+        if len(face_det) == 0:
+            print("Video does not contain any face")
+            return
+    print("5 frames extracted")
+    print("PersonId:", person_id)
+    print("FaceIds")
+    print("=======")
+    for i in range(5):
+        face_id = cf.person.add_face("frame{}.jpg".format(i), groupID, person_id)
+        print(face_id["persistedFaceId"])
+        
 
-def Train(session):
-    if az.CheckGroupUpdation(session):
-        print('Training task for {0} persons started'.format(az.StartTrain(session)))
-        az.UpdateGroupData(session, 'Don\'t updated')
-    else:
-        print('System does not updated')
-
-
-def Main():
-    session = GetParams()
-    az.CreateGroup(session)
-    temp = sys.argv
-    if temp[1] == '--simple-add':
-        SimpleAdd(session, temp[2])
-
-
-Main()
+if sys.argv[1] == "--simple-add":
+    video = sys.argv[2]
+    add_new(video)
