@@ -43,8 +43,6 @@ def Main():
     session = GetParams()
     az.CreateGroup(session)
     temp = sys.argv
-    print(temp[1])
-    print(temp[2])
     if temp[1] == '--simple-add':
         US004(session, temp[2])
 
