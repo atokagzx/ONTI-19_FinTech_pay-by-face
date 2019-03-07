@@ -23,9 +23,6 @@ def add(video):
     if video.get(cv.CAP_PROP_FRAME_COUNT) < 5:
         print("Video does not contain any face")
         return
-    creation = cf.person.create(groupID, id_x)
-    id_x += 1
-    person_id = creation["personId"]
     shift = video.get(cv.CAP_PROP_FRAME_COUNT) // video.get(cv.CAP_PROP_FPS) // 5
     for i in range(5): 
         video.set(cv.CAP_PROP_POS_FRAMES, shift * i)
@@ -38,7 +35,9 @@ def add(video):
     try:
         cf.person_group.create(groupID)
     except:
-        pass
+    creation = cf.person.create(groupID, id_x)
+    id_x += 1
+    person_id = creation["personId"]
     print("5 frames extracted")
     print("PersonId:", person_id)
     print("FaceIds")
