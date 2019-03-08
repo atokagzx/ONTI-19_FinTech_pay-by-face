@@ -23,9 +23,9 @@ def deploy(private_key):
 		reg_abi = loads(abi_file.read())
 	with open("registrar.bin") as bin_file:
 		reg_bytecode = bin_file.read()
-	with open("payment.abi") as abi_file:
+	with open("payments.abi") as abi_file:
 		pay_abi = loads(abi_file.read())
-	with open("payment.bin") as bin_file:
+	with open("payments.bin") as bin_file:
 		pay_bytecode = bin_file.read()
 	contract_reg = web3.eth.contract(abi = reg_abi, bytecode = reg_bytecode)
 	contract_pay = web3.eth.contract(abi = pay_abi, bytecode = pay_bytecode)
@@ -71,6 +71,60 @@ def deploy(private_key):
 	print("KYC Resistrar:", tx_r["contractAddress"])
 	print("Payment Handler:", tx_p["contractAddress"])
 
+def contract_owner(contract_name):
+	if contract_name == "registrar":
+		with open("registrar.abi") as abi_file:
+			reg_abi = loads(abi_file.read())
+		with open("registrar.bin") as bin_file:
+			reg_bytecode = bin_file.read()
+		with open("registrar.json") as registrar:
+			data = loads(registrar.read())
+			reg_address = data["registrar"]["address"]
+		contract_reg = web3.eth.contract(address = reg_address, abi = reg_abi)
+		owner = contract_reg.functions.owner().call()
+		print("Admin account:", owner)
+
+def change_owner(contract_name, address):
+	if contract_name == "registrar":
+		with open("registrar.abi") as abi_file:
+			reg_abi = loads(abi_file.read())
+		with open("registrar.bin") as bin_file:
+			reg_bytecode = bin_file.read()
+		with open("registrar.json") as registrar:
+			data = loads(registrar.read())
+			reg_address = data["registrar"]["address"]
+		contract_reg = web3.eth.contract(address = reg_address, abi = reg_abi)
+		headers = {"accept": "application/json"}
+		try:
+			data = requests.get(gas_url, headers)
+		except:
+			gas_price = defaul_price
+		else:
+			gas_price = int(data.json()["fast"] * 10**9)
+			if web3.eth.getBalance(account.address) < gas_price * 70000:
+				print("No enough funds to send transaction")
+				return
+			elif contract_reg.functions.owner().call() != account.address:
+				print("Request cannot be executed")
+				return
+		tx_chan = contract_reg.functions.change_con_owner(address).buildTransaction({
+			"from": account.address,
+			"nonce": web3.eth.getTransactionCount(account.address),
+			"gas": 100000,
+			"gasPrice": gas_price
+			})
+		signed_tx_chan = account.signTransaction(tx_chan)
+		tx_chan_id = web3.eth.sendRawTransaction(signed_tx_chan.rawTransaction)
+		tx_chan_receipt = web3.eth.waitForTransactionReceipt(tx_chan_id) 
+		print("New admin account:", address)
+
 
 if sys.argv[1] == "--deploy":
 	deploy(private_key)
+elif sys.argv[1] == "--owner":
+	contract_name = sys.argv[2]
+	contract_owner(contract_name)
+elif sys.argv[1] == "--chown":
+	contract_name = sys.argv[2]
+	new_owner = sys.argv[3]
+	change_owner(contract_name, new_owner)
