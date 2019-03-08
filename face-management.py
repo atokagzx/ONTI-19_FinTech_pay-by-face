@@ -23,7 +23,7 @@ def SimpleAdd(session, video):
         except:
             personID, facesID, count = session.CreatePerson(frames=temp)
             session.UpdateGroupData("Updated")
-            print('{1} frames extrac ted{0}PersonId: {2}{0}FaceIds{0}======={0}{3}'.format('\n', count, personID, '\n'.join(facesID)))
+            print('{1} frames extracted{0}PersonId: {2}{0}FaceIds{0}======={0}{3}'.format('\n', count, personID, '\n'.join(facesID)))
     except (az.FacesCountError, az.FramesCountError):
         print('Video does not contain any face')
     except az.PersonExistError as exc:  
