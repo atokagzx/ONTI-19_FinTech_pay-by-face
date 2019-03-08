@@ -191,6 +191,7 @@ def send_coins(pin_code, phone_number, value):
 			print("Transaction Hash: {}".format(tx_r.hex()))
 
 
+
 if sys.argv[1] == "--balance":
 	try:
 		with open("person.json") as person:
