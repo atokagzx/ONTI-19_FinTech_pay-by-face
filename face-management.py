@@ -1,53 +1,134 @@
 #!/usr/bin/env python
 
-import cognitive_face as cf
-import cv2 as cv 
-from json import load
-import sys
+### Put your code below this comment ###
+import AzureCSLib as az
+import sys 
 
+def GetParams():
+    import json
+    with open('faceapi.json') as jsonFile:
+        key = json.load(jsonFile)['key']
+    with open('faceapi.json') as jsonFile:
+        group = json.load(jsonFile)['groupId']
+    with open('faceapi.json') as jsonFile:
+        baseURL = json.load(jsonFile)['serviceUrl']
+    return az.FaceAPIsession(key, baseURL, group)
 
-with open("faceapi.json") as api:
-    data = load(api)
-    key = data["key"]
-    base_url = data["serviceUrl"]
-    groupID = data["groupId"]
-
-cf.BaseUrl.set(base_url)
-cf.Key.set(key)
-
-id_x = 0
-
-def add(video):
-    global id_x
-    video = cv.VideoCapture(video)
-    if video.get(cv.CAP_PROP_FRAME_COUNT) < 5:
-        print("Video does not contain any face")
-        return
-    shift = video.get(cv.CAP_PROP_FRAME_COUNT) // video.get(cv.CAP_PROP_FPS) // 5
-    for i in range(5): 
-        video.set(cv.CAP_PROP_POS_FRAMES, shift * i)
-        res, frame = video.read()
-        cv.imwrite("frame{}.jpg".format(i), frame)
-        face_det = cf.face.detect("frame{}.jpg".format(i))
-        if len(face_det) == 0:
-            print("Video does not contain any face")
-            return
+def SimpleAdd(session, video):
     try:
-        cf.person_group.create(groupID)
-    except:
-        pass
-    creation = cf.person.create(groupID, id_x)
-    id_x += 1
-    person_id = creation["personId"]
-    print("5 frames extracted")
-    print("PersonId:", person_id)
-    print("FaceIds")
-    print("=======")
-    for i in range(5):
-        face_id = cf.person.add_face("frame{}.jpg".format(i), groupID, person_id)
-        print(face_id["persistedFaceId"])
-        
+        temp = session.GetFrames(video)
+        try:
+            session.IdentifyPerson(frames=temp)
+            print('The person already on system')
+        except:
+            personID, facesID, count = session.CreatePerson(frames=temp)
+            session.UpdateGroupData("Updated")
+            print('{1} frames extrac ted{0}PersonId: {2}{0}FaceIds{0}======={0}{3}'.format('\n', count, personID, '\n'.join(facesID)))
+    except (az.FacesCountError, az.FramesCountError):
+        print('Video does not contain any face')
+    except az.PersonExistError as exc:  
+        print(exc.message)
 
-if sys.argv[1] == "--simple-add":
-    video = sys.argv[2]
-    add(video)
+def GetPersonList(session):
+    try:
+        session.CheckGroupExist()
+        if session.CountPersons() == 0:
+            print('No persons found')
+        else:
+            print('Persons IDs:\n{0}'.format('\n'.join(session.GetPersonList())))
+    except az.PersonGroupExistError as pgee:
+        print(pgee.message)
+
+def DeletePerson(session, personID):
+    try:
+        session.CheckGroupExist()
+        session.DeletePerson(personID=personID)
+        session.UpdateGroupData("Updated")
+        print('Person deleted')
+    except az.PersonGroupExistError:
+        print('The group does not exist')
+    except az.PersonExistError:
+        print('The person does not exist')
+
+def Train(session):
+    def temp():
+        if session.CheckGroupUpdation():
+            session.UpdateGroupData('Do not updated')
+            if session.CountPersons() == 0:
+                print('There is nothing to train')
+            else:
+                session.StartTrain()
+                print('Training successfully started')
+        else:
+            if session.CountPersons() == 0:
+                print('There is nothing to train')
+            else:
+                print('Already trained')
+
+    try:
+        session.CheckGroupExist()
+        try:
+            if not session.CheckGroupTraining():
+                temp()
+            else:
+                if session.CheckGroupUpdation():
+                    session.UpdateGroupData('Do not updated')
+                    session.StartTrain()
+                    print('Training successfully started')
+                else:
+                    print('Already trained')
+        except:
+            temp()
+    except az.PersonGroupExistError:
+        print('There is nothing to train')
+
+def UnsaveAuth(session, video):
+    import os
+    import json
+    try:
+        session.CheckGroupExist()
+        if session.CheckGroupUpdation():
+            print('The service is not ready')
+            try:
+                os.remove(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'person.json'))
+            except:
+                pass
+        else:
+            personID = session.IdentifyPerson(video)
+            print('{0} identified'.format(personID))
+            with open('person.json', 'w') as jsonF:
+                json.dump({ "id" : personID }, jsonF)
+    except az.PersonGroupExistError:
+        print('The service is not ready')
+    except az.SystemReadinessError:
+        print('System does not trained')
+    except az.LowDegreeOfConfidenceError:
+        print('The person was not found')
+    except (az.FramesCountError, az.FacesCountError):
+        print('The video does not follow requirements')
+
+def DeleteGroup(session):
+    try:
+        session.DeleteGroup()
+        print('Group was deleted')
+    except az.PersonGroupExistError:
+        print('Group does not exist')
+
+def Main():
+    session = GetParams()
+    temp = sys.argv
+    if temp[1] == '--simple-add':
+        SimpleAdd(session, temp[2])
+    elif temp[1] == '--list':
+        GetPersonList(session)
+    elif temp[1] == '--del':
+        DeletePerson(session, temp[2])
+    elif temp[1] == '--train':
+        Train(session)
+    elif temp[1] == '--find':
+        UnsaveAuth(session, temp[2])
+    elif temp[1] == '--delgr':
+        DeleteGroup(session)
+    elif temp[1] == '--stat':
+        print(session.GetGroupData())
+Main()

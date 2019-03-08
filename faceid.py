@@ -111,7 +111,7 @@ def add(pin_code, phone_number):
 		if web3.eth.getBalance(account.address) < gas_price * 70000:
 			print("No funds to send the request")
 			return
-		tx_add = contract_reg.functions.add_user(int(phone_number), account.address).buildTransaction({
+		tx_add = contract_reg.functions.add_user(int(phone_number[1:]), account.address).buildTransaction({
 			"from": account.address,
 			"nonce": web3.eth.getTransactionCount(account.address),
 			"gas": 100000,
@@ -127,19 +127,39 @@ def add(pin_code, phone_number):
 		print("Registration request sent by", tx_add_rec["transactionHash"].hex())
 
 def delete(pin_code):
-	with open("person.json") as person:
-		person_id = loads(person.read())["personId"].split("-")
-	with open("registrar.json") as registrar:
-		reg_address = load(registrar.read())["registrar"]["address"]
+	try:
+		with open("person.json") as person:
+			person_id = loads(person.read())["id"].split("-")
+	except:
+		print("ID is not found")
+		return
+	try:
+		with open("registrar.json") as registrar:
+			reg_address = loads(registrar.read())["registrar"]["address"]
+	except:
+		print("No contract address")
+		return
 	with open("registrar.abi") as abi_file:
 		reg_abi = loads(abi_file.read())
+	with open("network.json") as network:
+		default_price = loads(network.read())["defaultGasPrice"]
 	private_key = make_privet_key(person_id, pin_code)
 	account = web3.eth.account.privateKeyToAccount(private_key)
 	contract_reg = web3.eth.contract(address = reg_address, abi = reg_abi)
+	headers = {"accept": "application/json"}
+	try:
+		data = requests.get(gas_url, headers)
+	except:
+		gas_price = default_price
+	else:
+		gas_price = int(data.json()["fast"] * 10**9)
+	if web3.eth.getBalance(account.address) < gas_price * 70000:
+		print("No funds to sent the request")
+		return
 	try:
 		contract_reg.functions.users_by_address(account.address).call()
 	except:
-		print("Account does not exsist")
+		print("Account is not registered yet")
 	else:
 		tx_del = contract_reg.functions.delete_user(account.address).buildTransaction({
 			"from": account.address,
@@ -148,18 +168,22 @@ def delete(pin_code):
 			"gasPrice": gas_price
 			})
 		signed_tx_del = account.signTransaction(tx_del)
-		tx_del_id = web3.eth.sendRawTransaction(signed_tx_del.rawTransaction)
+		try:
+			tx_del_id = web3.eth.sendRawTransaction(signed_tx_del.rawTransaction)
+		except:
+			print("Unregistration request already sent")
+			return
 		tx_del_rec = web3.eth.waitForTransactionReceipt(tx_del_id)
 		print("Succesfully deleted by", tx_del_rec["transactionHash"].hex())
 
 def send_coins(pin_code, phone_number, value):
 	with open("person.json") as person:
-		person_id = loads(person.read())["personId"]
+		person_id = loads(person.read())["id"].split("-")
 	with open("registrar.json") as registrar:
 		reg_address = loads(registrar.read())["registrar"]["address"]
 	with open("registrar.abi") as abi_file:
 		reg_abi = loads(abi_file.read())
-	private_key = make_privet_key(pin_code, person_id)
+	private_key = make_privet_key(person_id, pin_code)
 	account = web3.eth.account.privateKeyToAccount(private_key)
 	if phone_number[0] != "+" or len(phone_number) != 12 or phone_number.lower().islower():
 		print("Incorrect phone number")
@@ -185,11 +209,51 @@ def send_coins(pin_code, phone_number, value):
 			else:
 				gas_price = int(data.json()["fast"] * 10**9)
 			tx_s = {"to" : receiver, "value" : int(value), "gas" : gas, "gasPrice" : gas_price, "nonce" : nonce}
-			signed = web3.eth.account.signTransaction(tx_s, sender)
+			signed = account.signTransaction(tx_s)
 			tx_r = web3.eth.sendRawTransaction(signed.rawTransaction)
 			print("""Payment of {} to {} scheduled""".format(convert(int(value)), phone_number))
 			print("Transaction Hash: {}".format(tx_r.hex()))
 
+def cancel_action(pin_code):
+	with open("person.json") as person:
+		person_id = loads(person.read())["id"].split("-")
+	with open("registrar.json") as registrar:
+		reg_address = loads(registrar.read())["registrar"]["address"]
+	with open("registrar.abi") as abi_file:
+		reg_abi = loads(abi_file.read())
+	headers = {"accept": "application/json"}
+	try:
+		data = requests.get(gas_url, headers)
+	except:
+		gas_price = default_price
+	else:
+		gas_price = int(data.json()["fast"] * 10**9)
+	private_key = make_privet_key(person_id, pin_code)
+	account = web3.eth.account.privateKeyToAccount(private_key)
+	contract_reg = web3.eth.contract(address = reg_address, abi = reg_abi)
+	check = True
+	if contract_reg.functions.users_by_address(account.address).call() != "0":
+		tx_can = contract_reg.functions.add_user(contract_reg.functions.users_by_address(account.address).call(), account.address).buildTransaction({
+			"from": account.address,
+			"nonce": web3.eth.getTransactionCount(account.address),
+			"gas": 100000,
+			"gasPrice": gas_price
+			})
+	else:
+		check = False
+		tx_can = contract_reg.functions.delete_user(account.address).buildTransaction({
+			"from": account.address,
+			"nonce": web3.eth.getTransactionCount(account.address),
+			"gas": 100000,
+			"gasPrice": gas_price
+			})
+	signed_can_del = account.signTransaction(tx_can)
+	tx_can_id = web3.eth.sendRawTransaction(signed_can_del.rawTransaction)
+	tx_can_rec = web3.eth.waitForTransactionReceipt(tx_can_id)
+	if check:
+		print("Registration canceled by", tx_can_rec["transactionHash"].hex())
+	else:
+		print("Unregistration canceled by", tx_can_rec["transactionHash"].hex())
 
 
 if sys.argv[1] == "--balance":
@@ -207,3 +271,14 @@ elif sys.argv[1] == "--add":
 	pin_code = sys.argv[2]
 	phone_number = sys.argv[3]
 	add(pin_code, phone_number)
+elif sys.argv[1] == "--del":
+	pin_code = sys.argv[2]
+	delete(pin_code)
+elif sys.argv[1] == "--send":
+	pin_code = sys.argv[2]
+	phone_number = sys.argv[3]
+	value = int(sys.argv[4])
+	send_coins(pin_code, phone_number, value)
+elif sys.argv[1] == "--cancel":
+	pin_code = sys.argv[2]
+	cancel_action(pin_code)
