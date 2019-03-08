@@ -42,7 +42,7 @@ def deploy(private_key):
 	tx_reg = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
-			 "gas": 300000,
+			 "gas": 400000,
 			 "gasPrice": gas_price 
 			 })
 	signed = account.signTransaction(tx_reg)
@@ -57,7 +57,7 @@ def deploy(private_key):
 	tx_pay = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
-			 "gas": 300000,
+			 "gas": 400000,
 			 "gasPrice": gas_price 
 			 })
 	signed = account.signTransaction(tx_pay)
