@@ -8,4 +8,4 @@ variables:
 
 test:
   extends: .run-checker
-  image: akolotov/ftchecker-final2019-001-day
+  image: $CHECKER_IMAGE
