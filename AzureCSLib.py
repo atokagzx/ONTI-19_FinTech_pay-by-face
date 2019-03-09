@@ -1,23 +1,18 @@
 #!/usr/bin/env python
 
-### VER 2.3 ###
-
-import cognitive_face as cf
-import numpy as np
-import dlib as dl
-import cv2
+### VER 2.1.1 ###
 
 ### <file-like object> ###
 class FrameFileObject:   
     def __init__(self, data):
+        import cv2
         self.data = cv2.imencode('.png', data)[1].tostring()
     
     def read(self):
         return self.data
-        
-    def getBuff(self):
-        return np.asarray(bytearray(self.data))
 ### </file-like object> ###
+
+import cognitive_face as cf
 
 ### <Сustom errors> ###
 class FramesCountError(Exception):
@@ -62,7 +57,7 @@ class PersonGroupTrainingError(Exception):
 ### </Сustom errors> ###
 
 class FaceAPIsession():
-    def __init__(self, key, baseURL, group, dlibPreditor="shape_predictor_68_face_landmarks.dat"):
+    def __init__(self, key, baseURL, group):
         errorMessage = ''
 
         if key == '' or key == None:
@@ -73,12 +68,6 @@ class FaceAPIsession():
             errorMessage += 'group;'
         if errorMessage != '':
             raise EmptyArgumentsError(errorMessage)
-
-        self.detector = dl.get_frontal_face_detector()
-        try:
-            self.predictor = dl.shape_predictor(dlibPreditor)
-        except:
-            self.predictor = dl.shape_predictor("D:/shape_predictor_68_face_landmarks.dat")
 
         self.group = group
         self.__key = key
@@ -160,9 +149,11 @@ class FaceAPIsession():
         return personName
 
     def CountFaces(self, frames):
+        self.OpenConnection()
+        count = 0
         allFramesHaveFace = True
         for x in frames:
-            temp = self.detector(cv2.imdecode(x.getBuff, -1))
+            temp = cf.face.detect(x)
             count += len(temp)
             if len(temp) == 0:
                 allFramesHaveFace = False
@@ -173,18 +164,17 @@ class FaceAPIsession():
         return len(cf.person.lists(self.group))
 
     def CheckFaces(self, frames):
-        for x in frames:
-            try:
-                self.CheckFace(x)
-                break
-            except:
-                continue
-        raise FacesCountError()
+        self.OpenConnection()
+        frames = [x for x in frames if self.CheckFace(x)]
+        if len(frames) == 0:
+            raise FacesCountError()
 
     def CheckFace(self, frame):
-        detected = self.detector(cv2.imdecode(frame.getBuff(), -1))
-        if len(detected) == 0:
-            raise FacesCountError()
+        self.OpenConnection()
+        if len(cf.face.detect(frame)) == 0:
+            return False
+        else:
+            return True
 
     def CheckGroupUpdation(self):
         self.OpenConnection()
@@ -229,7 +219,7 @@ class FaceAPIsession():
 
     def CheckGroupTraining(self):
         try:
-            return True if cf.person_group.get_status(self.group)['status'] == 'success' else False
+            return cf.person_group.get_status(self.group)['status']
         except cf.CognitiveFaceException as cfe:
             if cfe.code == 'PersonGroupNotTrained':
                 raise PersonGroupTrainingError()
@@ -247,12 +237,10 @@ class FaceAPIsession():
 
     def CreatePerson(self, video = None, frames = None, name = None, data = None):
         self.OpenConnection()
-
         if video != None or frames != None:
             frames = self.GetFrames(video) if frames == None else frames
             self.CheckFaces(frames)
             video = ''
-
         self.CreateGroup()
         if name != None:
             try:
@@ -314,7 +302,6 @@ class FaceAPIsession():
 
     def IdentifyPerson(self, video=None, frames=None, minDegree = 0.5):
         self.OpenConnection()
-
         try:
             status = cf.person_group.get_status(self.group)['status']
         except:
@@ -322,38 +309,29 @@ class FaceAPIsession():
 
         if status != 'succeeded':
             raise SystemReadinessError()
-
         if video == None and frames == None:
             raise EmptyArgumentsError('video;frames')
-
         IDs = self.GetIDs(self.GetFrames(video) if video != None else frames)
-
         personID = ''
-
         for x in cf.face.identify(IDs, self.group, threshold=0.5):
-
             if len(x['candidates']) == 0:
                 raise LowDegreeOfConfidenceError()
-
             if personID == '':
                 personID = x['candidates'][0]['personId']
-
             else:
                 if personID != x['candidates'][0]['personId']:
                     raise LowDegreeOfConfidenceError()
-
             return personID
 
     def GetPersonList(self):
         self.OpenConnection()
+        
         return [x['personId'] for x in cf.person.lists(self.group)]
 
     def UpdateGroupData(self, data):
         self.OpenConnection()
-
         if type(data) != type(''):
             raise InvalidArgumentError('data;')
-
         cf.person_group.update(self.group, self.group, data)
 
     def GetGroupData(self):
@@ -363,8 +341,6 @@ class FaceAPIsession():
     def DeleteGroup(self):
         self.OpenConnection()
         self.CheckGroupExist()
-
         cf.person_group.delete(self.group)
-
-        return True  
+        return True        
 ### </Main functions> ###

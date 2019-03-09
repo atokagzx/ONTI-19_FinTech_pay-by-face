@@ -7,11 +7,12 @@ import sys
 def GetParams():
     import json
     with open('faceapi.json') as jsonFile:
-        temp = json.load(jsonFile)
-        key = temp['key']
-        group = temp['groupId']
-        baseURL = temp['serviceUrl']
-    return az.FaceAPIsession(key, baseURL, group, "/opt/shape_predictor_68_face_landmarks.dat")
+        key = json.load(jsonFile)['key']
+    with open('faceapi.json') as jsonFile:
+        group = json.load(jsonFile)['groupId']
+    with open('faceapi.json') as jsonFile:
+        baseURL = json.load(jsonFile)['serviceUrl']
+    return az.FaceAPIsession(key, baseURL, group)
 
 def SimpleAdd(session, video):
     try:
