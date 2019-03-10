@@ -4,6 +4,7 @@ from web3 import Web3, HTTPProvider
 from json import dump, loads, load
 import requests
 import sys
+import time
 
 with open("network.json") as network:
 	data = load(network)
