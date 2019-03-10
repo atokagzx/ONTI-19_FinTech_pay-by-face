@@ -41,21 +41,7 @@ def deploy(private_key):
 	if balance < gas_price * 1500000:
 		print("No enough funds to send transaction")
 		return
-	x_ = test_con.constructor().buildTransaction({
-			"from": account.address,
-			"nonce": web3.eth.getTransactionCount(account.address),
-			"gas": 1500000,
-			"gasPrice": gas_price 
-			})
-	signed = account.signTransaction(x_)
-	tx_hash = web3.eth.sendRawTransaction(signed.rawTransaction)
-	tx_r = web3.eth.waitForTransactionReceipt(tx_hash)
-	print(tx_r)
-	with open("registrar.json", "w") as registrar:
-		dump({"registrar": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}, "payments": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}}, registrar)
-	print("KYC Resistrar:", tx_r["contractAddress"])
-	print("Payment Handler:", tx_r["contractAddress"])
-	"""contract_reg = web3.eth.contract(abi = reg_abi, bytecode = reg_bytecode)
+	contract_reg = web3.eth.contract(abi = reg_abi, bytecode = reg_bytecode)
 	contract_pay = web3.eth.contract(abi = pay_abi, bytecode = pay_bytecode)
 	headers = {"accept": "application/json"}
 	data = requests.get(gas_url, headers)
@@ -93,7 +79,7 @@ def deploy(private_key):
 	with open("registrar.json", "w") as registrar:
 		dump({"registrar": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}, "payments": {"address": tx_p["contractAddress"], "startBlock": tx_p["blockNumber"]}}, registrar)
 	print("KYC Resistrar:", tx_r["contractAddress"])
-	print("Payment Handler:", tx_p["contractAddress"])"""
+	print("Payment Handler:", tx_p["contractAddress"])
 
 def contract_owner(contract_name):
 	if contract_name == "registrar":
