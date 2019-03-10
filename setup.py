@@ -36,13 +36,13 @@ def deploy(private_key):
 		gas_price = defaul_price
 	else:
 		gas_price = int(data.json()["fast"] * 10**9)
-	if balance < gas_price * 70000:
+	if balance < gas_price * 4000000:
 		print("No enough funds to send transaction")
 		return
 	tx_reg = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
-			 "gas": 400000,
+			 "gas": 4000000,
 			 "gasPrice": gas_price 
 			 })
 	signed = account.signTransaction(tx_reg)
@@ -51,13 +51,13 @@ def deploy(private_key):
 	if tx_r["blockNumber"] is None:
 		print("Transaction is not validated too long")
 		return
-	if balance < gas_price * 70000:
+	if balance < gas_price * 400000:
 		print("No enough funds to send transaction")
 		return
 	tx_pay = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
-			 "gas": 400000,
+			 "gas": 4000000,
 			 "gasPrice": gas_price 
 			 })
 	signed = account.signTransaction(tx_pay)
