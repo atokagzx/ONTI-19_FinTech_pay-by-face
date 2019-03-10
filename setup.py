@@ -4,6 +4,7 @@ from web3 import Web3, HTTPProvider
 from json import dump, loads, load
 import requests
 import sys
+import time
 
 with open("network.json") as network:
 	data = load(network)
@@ -27,45 +28,50 @@ def deploy(private_key):
 		pay_abi = loads(abi_file.read())
 	with open("payments.bin") as bin_file:
 		pay_bytecode = bin_file.read()
+	headers = {"accept": "application/json"}
+	data = requests.get(gas_url, headers)
+	if data.status_code != 200:
+		gas_price = default_price
+	else:
+		gas_price = int(data.json()["fast"] * 10**9)
+	if balance < gas_price * 1500000:
+		print("No enough funds to send transaction")
+		return
 	contract_reg = web3.eth.contract(abi = reg_abi, bytecode = reg_bytecode)
 	contract_pay = web3.eth.contract(abi = pay_abi, bytecode = pay_bytecode)
 	headers = {"accept": "application/json"}
-	try:
-		data = requests.get(gas_url, headers)
-	except:
-		gas_price = defaul_price
+	data = requests.get(gas_url, headers)
+	if data.status_code != 200:
+		gas_price = default_price
 	else:
 		gas_price = int(data.json()["fast"] * 10**9)
-	if balance < gas_price * 4000000:
+	if balance < gas_price * 1500000:
 		print("No enough funds to send transaction")
 		return
 	tx_reg = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
-			 "gas": 4000000,
+			 "gas": 1500000,
 			 "gasPrice": gas_price 
 			 })
 	signed = account.signTransaction(tx_reg)
 	tx_hash_reg = web3.eth.sendRawTransaction(signed.rawTransaction)
 	tx_r = web3.eth.waitForTransactionReceipt(tx_hash_reg)
-	if tx_r["blockNumber"] is None:
-		print("Transaction is not validated too long")
-		return
-	if balance < gas_price * 400000:
+	time.sleep(5)
+	balance = web3.eth.getBalance(account.address)
+	if balance < gas_price * 1500000:
 		print("No enough funds to send transaction")
 		return
 	tx_pay = contract_reg.constructor().buildTransaction({
 			"from": account.address,
 			 "nonce": web3.eth.getTransactionCount(account.address),
-			 "gas": 4000000,
+			 "gas": 1500000,
 			 "gasPrice": gas_price 
 			 })
 	signed = account.signTransaction(tx_pay)
 	tx_hash_pay = web3.eth.sendRawTransaction(signed.rawTransaction)
 	tx_p = web3.eth.waitForTransactionReceipt(tx_hash_pay)
-	if tx_p["blockNumber"] is None:
-		print("Transaction is not validated too long")
-		return
+	time.sleep(5)
 	with open("registrar.json", "w") as registrar:
 		dump({"registrar": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}, "payments": {"address": tx_p["contractAddress"], "startBlock": tx_p["blockNumber"]}}, registrar)
 	print("KYC Resistrar:", tx_r["contractAddress"])
