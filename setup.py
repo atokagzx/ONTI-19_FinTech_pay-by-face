@@ -50,6 +50,7 @@ def deploy(private_key):
 	signed = account.signTransaction(x_)
 	tx_hash = web3.eth.sendRawTransaction(signed.rawTransaction)
 	tx_r = web3.eth.waitForTransactionReceipt(tx_hash)
+	print(tx_r)
 	with open("registrar.json", "w") as registrar:
 		dump({"registrar": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}, "payments": {"address": tx_r["contractAddress"], "startBlock": tx_r["blockNumber"]}}, registrar)
 	print("KYC Resistrar:", tx_r["contractAddress"])
