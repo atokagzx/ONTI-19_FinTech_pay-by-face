@@ -56,6 +56,7 @@ def deploy(private_key):
 			 })
 	signed = account.signTransaction(tx_reg)
 	tx_hash_reg = web3.eth.sendRawTransaction(signed.rawTransaction)
+	tx_r = web3.eth.waitForTransactionReceipt(tx_hash_reg)
 	time.sleep(5)
 	balance = web3.eth.getBalance(account.address)
 	if balance < gas_price * 1500000:
