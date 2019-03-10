@@ -27,11 +27,6 @@ def deploy(private_key):
 		pay_abi = loads(abi_file.read())
 	with open("payments.bin") as bin_file:
 		pay_bytecode = bin_file.read()
-	with open("test.abi") as abi_file:
-		abi = loads(abi_file.read())
-	with open("test.bin") as bin_file:
-		bytecode = bin_file.read()
-	test_con = web3.eth.contract(abi = abi, bytecode = bytecode)
 	headers = {"accept": "application/json"}
 	data = requests.get(gas_url, headers)
 	if data.status_code != 200:
@@ -60,7 +55,6 @@ def deploy(private_key):
 			 })
 	signed = account.signTransaction(tx_reg)
 	tx_hash_reg = web3.eth.sendRawTransaction(signed.rawTransaction)
-	tx_r = web3.eth.waitForTransactionReceipt(tx_hash_reg)
 	time.sleep(5)
 	balance = web3.eth.getBalance(account.address)
 	if balance < gas_price * 1500000:
