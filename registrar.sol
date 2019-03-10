@@ -5,7 +5,6 @@ contract registrar {
 	mapping(address => string) public pending_add;
 	mapping(address => string) public pending_del;
 	mapping(address => string) public confirmed_users;
-	mapping(string => address) public confirmed_users_by_number;
 	address[] public addresses_add;
 	address[] public addresses_del;
 	
@@ -81,7 +80,6 @@ contract registrar {
 		bytes memory del = bytes(pending_del[user_address]);
 		if(add.length != 0) {
 		    confirmed_users[user_address] = pending_add[user_address];
-		    confirmed_users_by_number[confirmed_users[user_address]] = user_address; 
 		    delete pending_add[user_address];
 		     for (uint i = 0; i < addresses_add.length; ++i) {
 		        if (user_address == addresses_add[i]) {
